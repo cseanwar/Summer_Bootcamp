@@ -1,0 +1,31 @@
+---
+- name: Application management on Windows hosts
+  hosts: win
+  gather_facts: yes
+  vars:
+    with_items:
+      - javaruntime
+      - flashplayeractivex
+      - 7zip
+      - firefox
+      - googlechrome
+      - atom
+      - notepadplusplus
+      - vlc
+      - adblockplus-firefox
+      - adblockpluschrome
+  tasks:
+   - name: Install latest updated Powershell for optimized Chocolatey commands
+     win_chocolatey:
+       name: powershell
+       state: latest
+
+   - name: Update Chocolatey to its latest version
+     win_chocolatey:
+       name: chocolatey
+       state: latest
+
+   - name: Install a list of applications via Chocolatey
+     win_chocolatey:
+       name: "{{ with_items }}"
+       state: latest
