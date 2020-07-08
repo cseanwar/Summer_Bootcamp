@@ -1,0 +1,74 @@
+--- # Create Linux virtual machine Centos in Azure 
+- hosts: localhost
+  connection: local
+  tasks:
+    # Resource group part
+    - name: create resource group
+      azure_rm_resourcegroup:
+        name: "pvc-rg"
+        location: "northeurope"
+      register: rg
+    - debug:
+        var: rg
+    # Virtual Network part
+    - name: create virtual network
+      azure_rm_virtualnetwork:
+        resource_group: pvc-rg
+        name: pvc-vnet
+        address_prefixes: "192.168.0.0/16"
+    # Subnet part
+    - name: add subnet in vnet
+      azure_rm_subnet:
+        resource_group: pvc-rg
+        name: pvc-subnet
+        address_prefix: "192.168.0.0/24"
+        virtual_network: pvc-vnet
+    # Public Ip 
+    - name: Creating public IP address
+      azure_rm_publicipaddress:
+        resource_group: pvc-rg
+        allocation_method: static
+        name: pvcPublicIP
+    # Network Security Group
+    - name: Create a network security group
+      azure_rm_securitygroup:
+        resource_group: pvc-rg
+        name: pvcNSG
+        rules:
+          - name: SSH
+            protocol: Tcp
+            destination_port_range: 22
+            access: Allow
+            priority: 1001
+            direction: Inbound
+    # Virtual Network Interface card
+    - name: Create virtual network interface card
+      azure_rm_networkinterface:
+        name: pvcNIC
+        resource_group: pvc-rg
+        location: "northeurope"
+        virtual_network: pvc-vnet
+        subnet: pvc-subnet
+        security_group: pvcNSG
+        ip_configurations:
+          - name: ipconfig1
+            public_ip_address_name: pvcPublicIP
+            primary: true
+
+    # Azure Virtual Mchine
+    - name: Create vm
+      azure_rm_virtualmachine:
+        resource_group: pvc-rg
+        name: pvc-vm
+        vm_size: Standard_DS1_v2
+        admin_username: azureuser
+        ssh_password_enabled: false
+        ssh_public_keys:
+          - path: /home/azureuser/.ssh/authorized_keys
+            key_data: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQD298fhVdjBxqfVmuvhb+cgkxPt8IVEakCmTnu41uGo1+Ea2bMOBya8GK9PHVp4hm4CcSJqESQy3vKQ3zuUOraeHiXCiNuhphhrZTpq4F41/iccstMMKL6myaXY0efjtHOls4CixRqORHpGsx8IFkxBpt4DXWIzHKikptGWddjRg0gnftTmP62VGPEdppr2G8sbYSo7Z7yer4Jfo3SBfQ2vTRG0mMW0M0KJdckcz1v02HOSysKHjhWyMxgKK4NRMkypdeM2fvjlAj+uGQIY0WAxQcg61GNkOcHFqFgEFZbMMRbzC2Fqk3j8ALdyghgbfYiTzmXEDgWSl624X/5gXPQrqYc4GoUr/POBC+Ix+7I67kTiHkQvW7p5G6XAo5qE9BFO41fxq/L33uYrD8yMjjBC/L5pPVowDo71HRc7PqEKmanWz3unXbu6OJAPFuLXVB+lHJ2PAHGYUY4AAskZiVcook0bNYXvrQFcnkmNWL6L9OwTSwrDhz9Wt/ia3/74scc5smYVZaOZz9gIWWXlGA5IEDB689080MZWLsCZgOUbHqUDYwEf2QfhQjaqALr1ebomQx5clOQaZr8Hi8MyMVwJPn6uKLYvr5Kpg0hE7XdttIhxtT23jgclrvAplLq2sz9HSP8Xx8BYiXdWO/L9UJ4bJkTrlTdfjPz4TdKZpJXX7Q== hossain.anwar@tentixo.com"
+        network_interfaces: pvcNIC
+        image:
+            offer: "UbuntuServer"
+            publisher: "Canonical"
+            sku: '18.04-LTS'
+            version: latest
